@@ -31,5 +31,7 @@
 *.out
 *.app
 *.workspace
-/Proteus Simulation/Atmega328/Project Backups
-/Proteus Simulation/STM32BlackPill_Sim/Project Backups
+
+
+#Build Directory 
+/build
