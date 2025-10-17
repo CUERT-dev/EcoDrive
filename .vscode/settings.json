@@ -2,6 +2,13 @@
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "core.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "compare": "cpp",
+        "cstdint": "cpp",
+        "unordered_map": "cpp",
+        "istream": "cpp",
+        "numeric": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp"
     }
 }

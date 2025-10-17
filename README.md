@@ -1,6 +1,6 @@
 
 ---
-# ⚡ ThorDrive
+# ⚡ EcoDrive
 
 A modular, open-source platform for developing **inverters**, **controllers**, and **embedded firmware** for electric vehicle applications.  
 Built with robust engineering principles and driven by passion.
@@ -11,7 +11,7 @@ Maintained by **Omar Magdy** for the **Cairo University Eco Racing Team**.
 
 ## 🧠 Overview
 
-ThorDrive implements a range of hardware and software solutions for electric drive systems.  
+EcoDrive implements a range of hardware and software solutions for electric drive systems.  
 It includes:
 
 - Custom inverters (multi-phase and bidirectional support)
@@ -33,33 +33,6 @@ It includes:
 - 🧪 **Validated by Real-World Team Use**
 
 Specific features are documented in each design subfolder:
-
-
-## 🛠️ Get Started
-
-1. **Navigate to a Design Folder**  
-   Visit:
-   - `ThorDrive_FW/<DesignName_and_Version>/README.md`
-   - `ThorDrive_HW/<DesignName_and_Version>/README.md`
-
-2. **Build Software / Flash Firmware**  
-   Follow platform-specific build instructions in each firmware README.
-
-3. **Hardware Fabrication**  
-   - Use provided **Gerber** files for PCB manufacturing.
-   - Access **Interactive BOM** from each hardware directory.
-
----
-
-## 📚 Documentation
-
-- **Firmware Documentation (Doxygen)**  
-  Inside:  
-  `ThorDrive_FW/<DesignName_and_Version>/docs/index.html`
-
-- **Hardware Documentation**  
-  - Inverter: `ThorDrive_HW/<DesignName_and_Version>/Inverter/Docs/`
-  - Controller: `ThorDrive_HW/<DesignName_and_Version>/Controller/Docs/`
 
 ---
 
