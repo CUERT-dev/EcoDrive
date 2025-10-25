@@ -1,8 +1,14 @@
-
+#include "core/motorControl/pmsmControl.h"
 
 
 
 int main(){
-    int x = 5*3;
+    EcoDrive::PmsmControl::PmsmControl::init();
+    
+    while (true) {
+        int a = 5+2;
+    }
+
     return 0;
+    
 }

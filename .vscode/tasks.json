@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Release",
+            "type": "shell",
+            "command": "cd build && rm -rf * && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4"
+        },
+        {
+            "label": "Debug",
+            "type": "shell",
+            "command": "cd build && rm -rf * && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4"
+        },
+        {   
+            "label": "CMake Only",
+            "type": "shell", 
+            "command": "cd build && rm -rf * && cmake .."
+        }
+    ]
+}

@@ -9,6 +9,15 @@
         "istream": "cpp",
         "numeric": "cpp",
         "ostream": "cpp",
-        "sstream": "cpp"
-    }
+        "sstream": "cpp",
+        "cmsis_os.h": "c",
+        "stm32f4xx.h": "c",
+        "stm32f4xx_hal.h": "c",
+        "cmath": "cpp",
+        "limits": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/arm-none-eabi-g++"
 }
