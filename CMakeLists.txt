@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)  # ← THAT'S IT
+# Prevent in-source builds
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR "
+    In-source builds are not allowed!
+    Please use:
+      mkdir build && cd build && cmake ..
+    ")
+endif()
+
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -15,14 +23,22 @@ set(CMAKE_CXX_STANDARD              17)
 set(CMAKE_CXX_STANDARD_REQUIRED     ON)
 set(CMAKE_CXX_EXTENSIONS            ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS   ON)
+# Control where files go WITHIN the build directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 
 set(CMAKE_TOOLCHAIN_FILE        ${CMAKE_SOURCE_DIR}/cmake/gcc-arm-none-eabi.cmake)
 
 project(EcoDrive LANGUAGES C CXX ASM)
 
-set(linker_script_SRC "${CMAKE_SOURCE_DIR}/linker_scripts/STM32F401XX_FLASH.ld")
 
+#platform specific settings
+set(linker_script_SRC "${CMAKE_SOURCE_DIR}/platforms/stm32f4xx/STM32F401XX_FLASH.ld")
+set(STARTUP_FILE "${CMAKE_SOURCE_DIR}/platforms/stm32f4xx/startup_stm32f401xc.s")
 include(Stm32F401xx)
+#End platform specific settings
+
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/application
@@ -30,15 +46,19 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/middleWare
     ${CMAKE_SOURCE_DIR}/core
     ${CMAKE_SOURCE_DIR}/thirdParty
+    ${CMAKE_SOURCE_DIR}/platforms
 )
 
 # Source files
 file(GLOB_RECURSE SOURCES
+    ${STARTUP_FILE}
     "application/*.cpp"
     "drivers/*.cpp"
     "drivers/*.c"
     "middleWare/*.cpp"
     "core/*.cpp"
+    "platforms/*.cpp"
+    "platforms/*.c"
 )
 
 
@@ -52,6 +72,9 @@ message(STATUS "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
 
 message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
+
+# Debug: Print all sources being compiled
+# message(STATUS "Sources to build: ${SOURCES}")
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
