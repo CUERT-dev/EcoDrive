@@ -1,7 +1,2 @@
 #pragma once
 
-
-namespace EcoDrive{
-
-    
-};

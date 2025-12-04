@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.20)
 
+
+
+####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platforms/stm32f4xx/cmake/gcc-arm-none-eabi.cmake)
 
-####platform specific settings
 add_subdirectory(platforms/stm32f4xx)
-set(PLATFORM_LIB ${STM32_PLATFORM_LIBRARIES})
+
+# Get platform libraries and interface
+set(PLATFORM_LIB stm32_platform)
+set(PLATFORM_INTERFACE stm32_interface)
 ####End platform specific settings
 
 project(EcoDrive LANGUAGES C CXX ASM)
@@ -42,7 +47,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/thirdParty
+    ${CMAKE_SOURCE_DIR}/thirdparty/lwrb/lwrb
 )
 
 # Source files
@@ -52,23 +57,21 @@ file(GLOB_RECURSE SOURCES
     "drivers/*.c"
     "middleWare/*.cpp"
     "core/*.cpp"
+    "core/*.c"
 )
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# ADD THIS: Ensure platform library is built first
-add_dependencies(${PROJECT_NAME} stm32_platform_combined)
-
-# FIXED: Remove undefined CPU_PARAMETERS
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wpedantic
-    -Wno-unused-parameter
-)
 
 # Link with platform
-target_link_libraries(EcoDrive PRIVATE ${PLATFORM_LIB})
+message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
+target_link_libraries(EcoDrive PRIVATE 
+                    ${PLATFORM_INTERFACE} 
+                    ${PLATFORM_LIB}
+                    ${TOOLCHAIN_LINK_LIBRARIES}
+
+                    )
 
 # ADD THIS: Show size automatically after every build
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

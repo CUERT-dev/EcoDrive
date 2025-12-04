@@ -1,8 +1,8 @@
 #pragma once
 
 
-namespace EcoDrive{
 
+template<uint8_t instance>
 class ITempSensor{
 
 
@@ -11,4 +11,3 @@ class ITempSensor{
 
 };
 
-}
