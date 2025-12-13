@@ -4,14 +4,7 @@ cmake_minimum_required(VERSION 3.20)
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platforms/stm32f4xx/cmake/gcc-arm-none-eabi.cmake)
-
-add_subdirectory(platforms/stm32f4xx)
-
-# Get platform libraries and interface
-set(PLATFORM_LIB stm32_platform)
-set(PLATFORM_INTERFACE stm32_interface)
-####End platform specific settings
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platform/cmake/gcc-arm-none-eabi.cmake)
 
 project(EcoDrive LANGUAGES C CXX ASM)
 
@@ -47,31 +40,41 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/thirdparty/lwrb/lwrb
+    ${CMAKE_SOURCE_DIR}/application
+    ${CMAKE_SOURCE_DIR}/driver
+    ${CMAKE_SOURCE_DIR}/middleware
+    ${CMAKE_SOURCE_DIR}/core
 )
+
+
 
 # Source files
 file(GLOB_RECURSE SOURCES
     "application/*.cpp"
-    "drivers/*.cpp"
-    "drivers/*.c"
-    "middleWare/*.cpp"
-    "core/*.cpp"
-    "core/*.c"
+    "application/*.c"
+    "driver/*.cpp"
+    "driver/*.c"
+    "middleware/*.c"
+    "middleware/*.cpp"
+    "core/ringbuffer.c"
 )
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-
 # Link with platform
+add_subdirectory(platform)
 message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
-target_link_libraries(EcoDrive PRIVATE 
-                    ${PLATFORM_INTERFACE} 
-                    ${PLATFORM_LIB}
-                    ${TOOLCHAIN_LINK_LIBRARIES}
 
-                    )
+# Add driver_core sources directly to the executable to ensure strong IRQ handlers
+# override weak startup symbols (avoids linker archive symbol resolution issues)
+target_sources(${PROJECT_NAME} PRIVATE ${PLATFORM_SOURCE})
+
+target_link_libraries(EcoDrive PRIVATE
+    ${PLATFORM_INTERFACE}
+    ${PLATFORM_LIB}
+    ${TOOLCHAIN_LINK_LIBRARIES}
+)
 
 # ADD THIS: Show size automatically after every build
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

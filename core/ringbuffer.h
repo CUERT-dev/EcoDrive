@@ -56,7 +56,7 @@ typedef struct ring_buffer_t ring_buffer_t;
  */
 struct ring_buffer_t {
   /** Buffer memory. */
-  char *buffer;
+  uint8_t *buffer;
   /** Buffer mask. */
   ring_buffer_size_t buffer_mask;
   /** Index of tail. */
@@ -73,7 +73,7 @@ struct ring_buffer_t {
  * @param buf The buffer allocated for the ringbuffer.
  * @param buf_size The size of the allocated ringbuffer.
  */
-void ring_buffer_init(ring_buffer_t *buffer, char *buf, size_t buf_size);
+void ring_buffer_init(ring_buffer_t *buffer, uint8_t *buf, size_t buf_size);
 
 /**
  * Adds an array of bytes to a ring buffer.
@@ -82,7 +82,7 @@ void ring_buffer_init(ring_buffer_t *buffer, char *buf, size_t buf_size);
  * @param size The size of the array.
  * @return 1 if successful; 0 if buffer full.
  */
-uint8_t ring_buffer_queue(ring_buffer_t *buffer, const char *data, ring_buffer_size_t size);
+uint8_t ring_buffer_queue(ring_buffer_t *buffer, const uint8_t *data, ring_buffer_size_t size);
 
 /**
  * Returns the <em>len</em> oldest bytes in a ring buffer.
@@ -91,7 +91,7 @@ uint8_t ring_buffer_queue(ring_buffer_t *buffer, const char *data, ring_buffer_s
  * @param len The maximum number of bytes to return.
  * @return The number of bytes returned.
  */
-ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, char *data, ring_buffer_size_t len);
+ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, uint8_t *data, ring_buffer_size_t len);
 
 /**
  * Peeks a ring buffer, i.e. returns an element without removing it.
@@ -100,7 +100,7 @@ ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, char *data, ring_b
  * @param index The index to peek.
  * @return 1 if data was returned; 0 otherwise.
  */
-uint8_t ring_buffer_peek(ring_buffer_t *buffer, char *data, ring_buffer_size_t index);
+uint8_t ring_buffer_peek(ring_buffer_t *buffer, uint8_t *data, ring_buffer_size_t index);
 
 /**
  * Returns whether a ring buffer is empty.

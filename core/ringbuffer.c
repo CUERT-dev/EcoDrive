@@ -6,7 +6,7 @@
  * Implementation of ring buffer functions.
  */
 
-void ring_buffer_init(ring_buffer_t *buffer, char *buf, size_t buf_size) {
+void ring_buffer_init(ring_buffer_t *buffer, uint8_t* buf, size_t buf_size) {
   RING_BUFFER_ASSERT(RING_BUFFER_IS_POWER_OF_TWO(buf_size) == 1);
   buffer->buffer = buf;
   buffer->buffer_mask = buf_size - 1;
@@ -14,7 +14,7 @@ void ring_buffer_init(ring_buffer_t *buffer, char *buf, size_t buf_size) {
   buffer->head_index = 0;
 }
 
-uint8_t ring_buffer_queue(ring_buffer_t *buffer, const char *data, ring_buffer_size_t size) {
+uint8_t ring_buffer_queue(ring_buffer_t *buffer, const uint8_t* data, ring_buffer_size_t size) {
   if (size == 0) return 1;
   
   /* Calculate available space and handle overflow */
@@ -45,7 +45,7 @@ uint8_t ring_buffer_queue(ring_buffer_t *buffer, const char *data, ring_buffer_s
   return 1;
 }
 
-ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, char *data, ring_buffer_size_t len) {
+ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, uint8_t *data, ring_buffer_size_t len) {
   if (ring_buffer_is_empty(buffer)) {
     return 0;
   }
@@ -74,7 +74,7 @@ ring_buffer_size_t ring_buffer_dequeue(ring_buffer_t *buffer, char *data, ring_b
   return bytes_to_read;
 }
 
-uint8_t ring_buffer_peek(ring_buffer_t *buffer, char *data, ring_buffer_size_t index) {
+uint8_t ring_buffer_peek(ring_buffer_t *buffer, uint8_t *data, ring_buffer_size_t index) {
   if (ring_buffer_is_empty(buffer)) {
     return 0;
   }

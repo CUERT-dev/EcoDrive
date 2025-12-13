@@ -1,10 +1,7 @@
 #pragma once
-#include "drivers/system/IMCADCPWM3P.hpp"
-#include "drivers/sensor/IHallSensor.hpp"
-#include "drivers/sensor/IEncoder.hpp"
-#include "drivers/sensor/IBemfZc.hpp"
-#include "core/math/math.hpp"
-
+#include "driver/IMCADCPWM3P.h"
+#include "driver/IBemfZc.h"
+#include "core/math.hpp"
 
 //===================================================
 // CONFIG
@@ -160,6 +157,8 @@ struct StartupData{
         uint32_t stableCycles = 0;           // How many cycles stable
         uint32_t requiredStableCycles = 10;  // Need 10 stable cycles
         uint32_t maxTimeout_uS = UNIT_TO_MICRO(150);
+        uint32_t lastZeroCrossTime_uS = 0;
+        int32_t zeroCrossAngleDetected_mDeg = 0;
         bool positionLocked = false;
         bool switchover_status = false;
     } switchover;
@@ -171,8 +170,7 @@ class PmsmControl{
     static inline MCADCPWM3P<1> adcpwmDriver;
     static inline pmsmParameter motorParams;
     // Position Sensors
-    static inline HallSensor<1> hallSensor;
-    static inline Encoder<1> encoder;
+
     static inline BemfZc<1> bemfZcd;
 
     static inline controlLoopContext ctx;
@@ -191,8 +189,7 @@ class PmsmControl{
     static inline void starting_encoder();
  
 
-    //Control Superloop
-    static inline void controlLoop();
+  
     
 
 public:
@@ -223,6 +220,8 @@ public:
     }
 
     ~PmsmControl() = default;
+      //Control Superloop
+    static inline void controlLoop();
 
 };
 

@@ -21,5 +21,10 @@
             "type": "shell", 
             "command": "cd build  && rm -rf *"
         },
+        {
+            "label": "PyPortRelease",
+            "type": "shell",
+            "command": "cd tools/build  && rm -rf * && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4"
+        },
     ]
 }

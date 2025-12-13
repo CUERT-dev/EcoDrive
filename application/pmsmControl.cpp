@@ -2,7 +2,7 @@
 
 #define ST_TASK(task_name, ticker, task, divisor)do{\
     static uint16_t counter_##task_name = 0;\
-    if(++counter_##task_name > divisor){\
+    if(++counter_##task_name >= divisor){\
         counter_##task_name = 0;\
         task;\
     }\
@@ -72,13 +72,11 @@ void PmsmControl::hardwareInit()
     // Sensor Initialization code
     bemfZcd.init(__hallConfig);
     // Arm the Control Loop
-    adcpwmDriver.adcPwm_registerPostScanCallback(controlLoop);
 }
 
 
-void PmsmControl::controlLoop()
+inline void PmsmControl::controlLoop()
 {
-    DPIO_set();
     ctx.t_nS += ctx.pwm_period_nS;
     ctx.t_uS += ctx.pwm_period_uS;
     //Control Loop Code (read adcPwm scan data)
@@ -93,53 +91,15 @@ void PmsmControl::controlLoop()
     default:
         break;
     }
-    adcpwmDriver.pwm_write(ctx.U_Duty_q15, ctx.V_Duty_q15, ctx.W_Duty_q15);
+
     ctx.cnt++;
-    DPIO_reset();
 }
 
 
-static inline void TRAP_write(controlLoopContext &ctx, uint8_t TRAP_sector, int16_t magnitude_q15)
+void MCADCPWM3P_adcPwm_postScanCallback(void)
 {
-    switch (TRAP_sector)
-    {
-    case 1:
-        ctx.U_Duty_q15 = magnitude_q15;
-        ctx.V_Duty_q15 = 0;
-        ctx.W_Duty_q15 = -1;
-        break;
-    case 2:
-        ctx.U_Duty_q15 = magnitude_q15;
-        ctx.V_Duty_q15 = -1;
-        ctx.W_Duty_q15 = 0;
-        break;
-    case 3:
-        ctx.U_Duty_q15 = -1;
-        ctx.V_Duty_q15 = magnitude_q15;
-        ctx.W_Duty_q15 = 0;
-        break;
-    case 4:
-        ctx.U_Duty_q15 = 0;
-        ctx.V_Duty_q15 = magnitude_q15;
-        ctx.W_Duty_q15 = -1;
-        break;
-    case 5:
-        ctx.U_Duty_q15 = 0;
-        ctx.V_Duty_q15 = -1;
-        ctx.W_Duty_q15 = magnitude_q15;
-        break;
-    case 6:
-        ctx.U_Duty_q15 = -1;
-        ctx.V_Duty_q15 = 0;
-        ctx.W_Duty_q15 = magnitude_q15;
-        break;
-    default:
-        break;
-    }
-
-    ctx.current_TRAP_Sector = TRAP_sector;
+    PmsmControl::controlLoop();
 }
-
 
 inline void PmsmControl::starting()
 {
@@ -147,6 +107,8 @@ inline void PmsmControl::starting()
 }
 
 
+#include <stdio.h>
+#include <cinttypes>
 
 inline void PmsmControl::starting_bemfzc()
 {
@@ -156,7 +118,7 @@ inline void PmsmControl::starting_bemfzc()
         ctx.current_TRAP_Sector = st_data.align.TRAP_Sector;
         st_data.align.start_time_uS = ctx.t_uS; //record start time
         int16_t duty_q15 = int32_t(st_data.align.voltage_mV<< 15)/ctx.busVoltage_mV;
-        TRAP_write(ctx, ctx.current_TRAP_Sector, duty_q15); 
+        adcpwmDriver.pwmTRAP_write(ctx.current_TRAP_Sector, duty_q15); 
         bemfZcd.reset(TRAP_toElecAngle_mDeg(ctx.current_TRAP_Sector)); //Reset backemf zero cross position sensor position
         cts.startupPhase = StartupPhase::ALIGN_RUNNING; // move to next state , waiting
         break;
@@ -190,8 +152,13 @@ inline void PmsmControl::starting_bemfzc()
             }
         }
         int16_t duty_q15 = int32_t(st_data.ramp.voltage_mV << 15)/ctx.busVoltage_mV;
-        TRAP_write(ctx, ctx.current_TRAP_Sector, duty_q15);
-        bemfZcd.update(ctx.t_uS, ctx.scanData[0], ctx.scanData[1], ctx.scanData[2], ctx.current_TRAP_Sector);
+        adcpwmDriver.pwmTRAP_write(ctx.current_TRAP_Sector, duty_q15);
+        bemfZcd.update(ctx.t_nS, ctx.scanData[0], ctx.scanData[1], ctx.scanData[2], ctx.current_TRAP_Sector);
+        if(bemfZcd.zeroCrossedNow())
+        {
+            st_data.switchover.lastZeroCrossTime_uS = ctx.t_uS;
+            st_data.switchover.zeroCrossAngleDetected_mDeg = ((st_data.switchover.lastZeroCrossTime_uS - st_data.ramp.lastStepTime_uS)*UNIT_TO_MILLI(60))/(st_data.ramp.stepDuration_uS);
+        }
         break;
     }
     default:
