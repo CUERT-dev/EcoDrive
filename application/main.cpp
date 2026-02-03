@@ -1,4 +1,4 @@
-#include "pmsmControl.hpp"
+#include "pmsmControl/pmsmControl.h"
 #include <stdio.h>
 #include "platform/platform.h"
 #include "driver/ISerial.h"
@@ -37,5 +37,4 @@ int main(){
     }
 
     return 0;
-    
 }

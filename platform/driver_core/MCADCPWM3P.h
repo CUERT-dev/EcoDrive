@@ -16,7 +16,7 @@ const int32_t* MCADCPWM3P_adcReg_read(void);
 bool MCADCPWM3P_adcReg_isReady(void);
 
 void MCADCPWM3P_adcPwm_read(int32_t scanData[6]);
-void MCADCPWM3P_adcPwm_setScanMode(MCADCPWM3P_PwmScanMode mode);
+void MCADCPWM3P_adcPwm_setScanMode(uint8_t mode);
 
 void MCADCPWM3P_pwmFLOAT_write();
 void MCADCPWM3P_pwmTRAP_write(int8_t sector, uint16_t duty_q15);

@@ -52,7 +52,7 @@ struct MCADCPWM3P_Instance{
     int16_t dutyMin_q15 = 0;
 };
 
-enum class MCADCPWM3P_PwmScanMode{
+enum class MCADCPWM3P_PwmScanSector{
     TRAP_SECTOR1 = 0,
     TRAP_SECTOR2 = 0,
     TRAP_SECTOR3 = 0,
@@ -79,9 +79,9 @@ enum class MCADCPWM3P_PwmScanMode{
 //=====================================================
 struct Hall_Config{
     //Hysteresis voltage for zero cross detection in BEMFZc  
-    uint32_t hysteresisVoltage_mV;
-    uint32_t commutationDelay_DegElec;
-    uint32_t minimumElecVelocity_DegpS;
+    float hysteresisVoltage_V;
+    float commutationDelay_DegElec;
+    float minimumElecVelocity_DegpS;
 };
 
 

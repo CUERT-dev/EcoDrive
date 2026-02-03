@@ -11,14 +11,15 @@
 #include "../MCADCPWM3P.h"
 #include "MCADCPWM3P_common.h"
 
-//======================================================
-//DRIVER LAYER GLOBALS
-//======================================================
-#if MCADCPWM3P_CS == CS_NONE
-#pragma message "CURRENT SENSOR : NONE"
+#if MCADCPWM3P_CS == CS_TRIPLE_SHUNT
+#pragma message "CURRENT SENSOR : TRIPLE SHUNT"
 
 MCADCPWM3P_Instance MCADCPWM3P_I1;
 MCADCPWM3P_Config MCADCPWM3P_CFG1;
+
+#define MCADCPWM3P_ADCSCANMODE_TRAPEZOIDAL 0
+#define MCADCPWM3P_ADCSCANMODE_SVM 1
+uint8_t MCADCPWM3P_adcScanMode = MCADCPWM3P_ADCSCANMODE_TRAPEZOIDAL;
 
 static void MCADCPWM3P_tim1Init(const MCADCPWM3P_Config &cfg){
     //ENABLE Peripheral CLOCK
@@ -118,7 +119,7 @@ static void MCADCPWM3P_adcPwm_TrapScanMode()
     
     LL_ADC_INJ_InitTypeDef adc1InjInitStruct = {
         .TriggerSource = LL_ADC_INJ_TRIG_EXT_TIM1_TRGO,
-        .SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_3RANKS,
+        .SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS,
         .SequencerDiscont = LL_ADC_INJ_SEQ_DISCONT_DISABLE,
         .TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT
     };                                                      
@@ -135,9 +136,61 @@ static void MCADCPWM3P_adcPwm_TrapScanMode()
     LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, MCADCPWM3P_VSW_ADC_CHANNEL);  // Phase C Voltage
 
     // Set sampling times for all PWM Scan channels (injected group)
-    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+
+    // Enable ADC interrupts
+    LL_ADC_EnableIT_JEOS(ADC1);  // Injected sequence end interrupt    
+}
+
+static void MCADCPWM3P_adcPwm_SvmScanMode()
+{
+    //## Configure use TIM1 CH4 for adc triggering (we exlusively use CH4 for adc triggering)
+    //==================================================================
+    // USE CHANNEL 4 Exlusively FOR Injected Adc channel (adcPWM Scan)
+    //==================================================================
+    LL_TIM_OC_InitTypeDef ch4_tim1_OCInit = 
+    {
+        .OCMode = LL_TIM_OCMODE_PWM1,           // Change to PWM mode
+        .OCState = LL_TIM_OCSTATE_ENABLE,       // Enable the output
+        .CompareValue = (LL_TIM_GetAutoReload(TIM1) + 1) / 2, // Mid-point for center-aligned
+        .OCPolarity = LL_TIM_OCPOLARITY_HIGH,   // Rising edge at compare match
+        .OCIdleState = LL_TIM_OCIDLESTATE_LOW,
+    };
+    LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH4);
+    LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH4, &ch4_tim1_OCInit);
+ 
+    // Set as trigger output (for ADC synchronization)
+    LL_TIM_SetTriggerOutput(TIM1, LL_TIM_TRGO_OC4REF);
+    
+    LL_ADC_INJ_InitTypeDef adc1InjInitStruct = {
+        .TriggerSource = LL_ADC_INJ_TRIG_EXT_TIM1_TRGO,
+        .SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS,
+        .SequencerDiscont = LL_ADC_INJ_SEQ_DISCONT_DISABLE,
+        .TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT
+    };                                                      
+
+    // Initialize ADC injected group for time-critical measurements
+    LL_ADC_INJ_Init(ADC1, &adc1InjInitStruct);
+
+    //ADC CONFIGURATIONS AND LINKAGE TO TIM1 TRGO
+    LL_ADC_INJ_StartConversionExtTrig(ADC1, LL_ADC_INJ_TRIG_EXT_RISING);
+
+    // Configure injected group sequence (PWM-synchronized measurements)
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, MCADCPWM3P_CSU_ADC_CHANNEL);  // U current
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, MCADCPWM3P_CSV_ADC_CHANNEL);  // V current
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, MCADCPWM3P_CSW_ADC_CHANNEL);  // W current
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, MCADCPWM3P_VSBUS_ADC_CHANNEL);  // Bus Voltage
+
+    // Set sampling times for all PWM Scan channels (injected group)
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_CSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, MCADCPWM3P_VSBUS_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
 
     // Enable ADC interrupts
     LL_ADC_EnableIT_JEOS(ADC1);  // Injected sequence end interrupt    
@@ -293,6 +346,9 @@ void MCADCPWM3P_pwmSVM_init(){
     ccmr1_shadow &= ~(OC1M_MASK | OC2M_MASK);  // Clear OC1M bits & OC2M bits
     ccmr2_shadow &= ~OC3M_MASK;  // Clear OC3M bits
 
+    ccmr1_shadow |= OC1M_PWM | OC2M_PWM; // Set PWM mode
+    ccmr2_shadow |= OC3M_PWM;
+    
     // ===== WRITE ALL SHADOW REGISTERS =====
     TIM1->CCER = ccer_shadow;
     TIM1->CCMR1 = ccmr1_shadow;
@@ -372,13 +428,13 @@ static inline void MCADCPWM3P_adcPwm_TrapRead(int32_t scanData[6])
     //==================================================================
     //VoltageMeasurements based on Phase State
     //==================================================================
-    scanData[0] = U_VS_uV_TO_mV(MCADCPWM3P_ADC_TO_uV(
+    scanData[0] = U_VS_V_TO_V(MCADCPWM3P_ADC_TO_uV(
                                         LL_ADC_INJ_ReadConversionData32(ADC1, LL_ADC_INJ_RANK_1)
                                     ));
-    scanData[1] = V_VS_uV_TO_mV(MCADCPWM3P_ADC_TO_uV(
+    scanData[1] = V_VS_V_TO_V(MCADCPWM3P_ADC_TO_uV(
                                         LL_ADC_INJ_ReadConversionData32 (ADC1, LL_ADC_INJ_RANK_2)
                                     ));
-    scanData[2] = W_VS_uV_TO_mV(MCADCPWM3P_ADC_TO_uV(
+    scanData[2] = W_VS_V_TO_V(MCADCPWM3P_ADC_TO_uV(
                                         LL_ADC_INJ_ReadConversionData32 (ADC1, LL_ADC_INJ_RANK_3)
                                     ));
 
@@ -387,15 +443,57 @@ static inline void MCADCPWM3P_adcPwm_TrapRead(int32_t scanData[6])
     scanData[5] = 0.0f;
 }
 
+//======================================================================
+// ReadPhase Voltages and Currents
+//======================================================================
+static inline void MCADCPWM3P_adcPwm_SvmRead(int32_t scanData[6])
+{
+    //==================================================================
+    //VoltageMeasurements based on Phase State
+    //==================================================================
+    scanData[0] = BUS_VS_V_TO_V(MCADCPWM3P_ADC_TO_uV(
+                                        LL_ADC_INJ_ReadConversionData32(ADC1, LL_ADC_INJ_RANK_1)
+                                    ) / 1000000.0f);
+    scanData[1] = 0;
+    scanData[2] = 0;
+
+    scanData[3] = V_CS_V_TO_A(MCADCPWM3P_ADC_TO_uV(
+                                        LL_ADC_INJ_ReadConversionData32 (ADC1, LL_ADC_INJ_RANK_2)
+                                    ) / 1000000.0f);
+    scanData[4] = W_CS_V_TO_A(MCADCPWM3P_ADC_TO_uV(
+                                        LL_ADC_INJ_ReadConversionData32 (ADC1, LL_ADC_INJ_RANK_3)
+                                    ) / 1000000.0f);
+    scanData[5] = W_CS_V_TO_A(MCADCPWM3P_ADC_TO_uV(
+                                        LL_ADC_INJ_ReadConversionData32 (ADC1, LL_ADC_INJ_RANK_4)
+                                    ) / 1000000.0f);
+}
 
 void MCADCPWM3P_adcPwm_read(int32_t scanData[6])
 {
-    return MCADCPWM3P_adcPwm_TrapRead(scanData);
+    if(MCADCPWM3P_adcScanMode == MCADCPWM3P_ADCSCANMODE_SVM)
+    {
+        return MCADCPWM3P_adcPwm_SvmRead(scanData);
+    }
+    else
+    {
+        return MCADCPWM3P_adcPwm_TrapRead(scanData);
+    }
 }
 
-void MCADCPWM3P_adcPwm_setScanMode(MCADCPWM3P_PwmScanMode mode)
+void MCADCPWM3P_adcPwm_setScanMode(uint8_t mode)
 {
-    //Do nothing , with no current sensing only trapezoidal is supported no current reconstruction , nothing
+    MCADCPWM3P_adcScanMode = mode;
+    if(MCADCPWM3P_adcScanMode == MCADCPWM3P_ADCSCANMODE_SVM)
+    {
+        return MCADCPWM3P_adcPwm_SvmScanMode();
+    }
+    else
+    {
+        return MCADCPWM3P_adcPwm_TrapScanMode();
+    }
 }
 
+static inline void MCADCPWM3P_adc_update(){
+
+}
 #endif

@@ -37,7 +37,7 @@ constexpr uint32_t UART1_RX_DRV_BUFFER_SIZE = 256;
 
 constexpr uint8_t MCADCPWM3P_REGSCAN_CHANNEL_NUM = 3;
 //Motor control tasking frequency
-#define XMC_TICKFREQ_HZ 5000
+#define XMC_TICKFREQ_HZ 2000
 //================================================
 // DMA CONFIGURATION
 //================================================

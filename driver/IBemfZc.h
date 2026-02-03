@@ -23,11 +23,11 @@ class BemfZc{
         if constexpr(instance == 1)hall1_init();
     }
 
-    void update(const uint32_t t_nS, const int32_t u_mV, const int32_t v_mV, const int32_t w_mV, const uint8_t TRAP_sector)
+    void update(const uint32_t t_nS, const float u_V, const float v_V, const float w_V, const uint8_t TRAP_sector)
     {
         isZeroCrossedNow = false;
-        uint32_t vn_mV = (u_mV + v_mV + w_mV)/3;
-        uint32_t bemf_mV = 0;
+        float vn_V = (u_V + v_V + w_V)/3;
+        float bemf_V = 0;
         // Handle 6→1 wrap-around and 1→6 reverse wrap
         int8_t direction = TRAP_sector - last_TRAP_sector;
         
@@ -40,20 +40,20 @@ class BemfZc{
         // Back emf = floating phase measured voltage - neutral voltage (all with respect to ground)
         switch (TRAP_sector)
         {
-            case 1:case 4: bemf_mV = w_mV - vn_mV; break;
-            case 2:case 5: bemf_mV = v_mV - vn_mV; break;
-            case 3:case 6: bemf_mV = u_mV - vn_mV; break;
+            case 1:case 4: bemf_V = w_V - vn_V; break;
+            case 2:case 5: bemf_V = v_V - vn_V; break;
+            case 3:case 6: bemf_V = u_V - vn_V; break;
             default:
                 break;
         }
 
         //Zero crossing hysteresis functionality
-        if(last_bemf_state == true && bemf_mV < -config.hysteresisVoltage_mV)
+        if(last_bemf_state == true && bemf_V < -config.hysteresisVoltage_V)
         {
             last_bemf_state = false;
-            int32_t ElecVelocity = getElecVelocity_DegpS();
+            float ElecVelocity = getElecVelocity_DegpS();
             ElecVelocity = ElecVelocity < 0? -ElecVelocity : ElecVelocity;
-            if((uint32_t)ElecVelocity > config.minimumElecVelocity_DegpS){
+            if(ElecVelocity > config.minimumElecVelocity_DegpS){
                 uint32_t delay_uS = UNIT_TO_MICRO(config.commutationDelay_DegElec/ElecVelocity);
                 if constexpr(instance == 1){
                 isZeroCrossedNow = true;
@@ -62,10 +62,10 @@ class BemfZc{
                 }
             }
         }
-        else if(last_bemf_state == false && bemf_mV > config.hysteresisVoltage_mV)
+        else if(last_bemf_state == false && bemf_V > config.hysteresisVoltage_V)
         {
             last_bemf_state = true;
-            uint32_t ElecVelocity = getElecVelocity_DegpS();
+            float ElecVelocity = getElecVelocity_DegpS();
             ElecVelocity = ElecVelocity < 0? -ElecVelocity : ElecVelocity;
             if(ElecVelocity > config.minimumElecVelocity_DegpS){
                 uint32_t delay_uS = UNIT_TO_MICRO(config.commutationDelay_DegElec/ElecVelocity);
@@ -82,27 +82,27 @@ class BemfZc{
         last_TRAP_sector = TRAP_sector;
     }
     
-    inline int32_t getElecAngle_mDeg()
+    inline int32_t getElecAngle_Deg()
     {
-        return (triggerCount%6)*UNIT_TO_MILLI(60);
+        return (triggerCount%6)*60;
     }
 
-    void reset(int32_t angle_mDeg = 0)
+    void reset(float angle_Deg = 0)
     {
-        triggerCount += angle_mDeg/UNIT_TO_MILLI(60);
+        triggerCount += angle_Deg/60;
     }
 
     bool zeroCrossedNow()
     {
         return isZeroCrossedNow;
     }
-    int32_t getElecVelocity_DegpS()
+    float getElecVelocity_DegpS()
     {
         uint16_t period_uS;
         if constexpr(instance == 1)period_uS = hall1_getPeriod_uS();
         if(period_uS == 0) return 0x7FFFFFFF;//oveflow
         //Some other calculations here
-        return UNIT_TO_MICRO(60)/period_uS;
+        return UNIT_TO_MICRO(60.0)/period_uS;
     }
 
     inline void enableCOMCallback(void(*cb)())

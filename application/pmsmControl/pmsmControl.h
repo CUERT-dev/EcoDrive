@@ -1,52 +1,60 @@
 #pragma once
+#include "core/math.hpp"
 #include "driver/IMCADCPWM3P.h"
 #include "driver/IBemfZc.h"
-#include "core/math.hpp"
-
 //===================================================
 // CONFIG
 //==================================================
 
+
+#define ST_TASK(task_name, ticker, task, divisor)do{\
+    static uint16_t counter_##task_name = 0;\
+    if(++counter_##task_name >= divisor){\
+        counter_##task_name = 0;\
+        task;\
+    }\
+}\
+while(0);
+
 struct pmsmParameter{
     uint8_t polePairs;
-    uint32_t fluxLinkage_mWb;
-    uint32_t statorResistance_mOhm;
-    uint32_t statorInductance_uH;
-    uint32_t inertia_uKgm2;
-    uint32_t friction_uNmpS;
-    uint32_t KV_mRpmPerVolt;
-    uint32_t maximumCurrent_mA;
-    uint32_t maximumVoltage_mV;
+    float fluxLinkage_Wb;
+    float statorResistance_Ohm;
+    float statorInductance_H;
+    float inertia_Kgm2;
+    float friction_NmpS;
+    float KV_RpmPerVolt;
+    float maximumCurrent_A;
+    float maximumVoltage_V;
 };
 
 constexpr pmsmParameter __motorParams =  
 {
     .polePairs = 7,
-    .fluxLinkage_mWb = 15,
-    .statorResistance_mOhm = 100,
-    .statorInductance_uH = 1000,
-    .inertia_uKgm2 = 1000,
-    .friction_uNmpS = 1000,
-    .KV_mRpmPerVolt = 120,
-    .maximumCurrent_mA = 30,
-    .maximumVoltage_mV = 48
+    .fluxLinkage_Wb = 15,
+    .statorResistance_Ohm = 100,
+    .statorInductance_H = 1000,
+    .inertia_Kgm2 = 1000,
+    .friction_NmpS = 1000,
+    .KV_RpmPerVolt = 120,
+    .maximumCurrent_A = 30,
+    .maximumVoltage_V = 48
 };
-
 
 constexpr MCADCPWM3P_Config __adcpwmConfig = 
 {
-    .pwmFreq_Hz = 10000,
-    .deadtime_nS = 1300,
-    .dutyMax_perc = 95,
+    .pwmFreq_Hz = 20000,
+    .deadtime_nS = 1500,
+    .dutyMax_perc = 15,
     .dutyMin_perc = 5,
     .breakEnabled = false
 };
 
 constexpr Hall_Config __hallConfig = 
 {
-    .hysteresisVoltage_mV = 300,
+    .hysteresisVoltage_V = 0.3,
     .commutationDelay_DegElec = 30,
-    .minimumElecVelocity_DegpS = (1000*360)/60
+    .minimumElecVelocity_DegpS = (360*5)/60
 };
 
 //===================================================
@@ -100,17 +108,19 @@ enum class Direction : uint8_t {
 
 
 struct controlLoopContext{
-    uint32_t busVoltage_mV = 12500;
+    uint32_t busVoltage_V = 12.5;
     int32_t scanData[6];
     uint32_t cnt = 0;
     uint64_t t_nS = 0;
     uint32_t pwm_period_nS = 0;
     uint32_t t_uS = 0;
     uint16_t pwm_period_uS = 0;
-    int16_t U_Duty_q15 = 0;
-    int16_t V_Duty_q15 = 0;
-    int16_t W_Duty_q15 = 0;
-    uint8_t current_TRAP_Sector = 0;  
+    
+    int16_t voltage_q15 = 0;
+    uint8_t current_TRAP_Sector = 0; 
+    
+
+    
     Direction direction = Direction::FORWARD; 
 };
 
@@ -122,11 +132,10 @@ struct ControlLoopState{
     PositionSensor positionSensor = PositionSensor::BEMFZC;
 };
 
-
-struct StartupData{
+struct SensorlessTrap_StartupData{
     // Phase 1: Alignment
     struct {
-        uint32_t voltage_mV = UNIT_TO_MILLI(1);              // Alignment voltage (5V typical)
+        float voltage_V = 1;              // Alignment voltage (5V typical)
         uint32_t start_time_uS = 0;
         uint32_t duration_uS = UNIT_TO_MICRO(0.1);  // 100ms alignment
         uint8_t TRAP_Sector = 1;            // Which phase to align (0=U, 1=V, 2=W)
@@ -135,15 +144,14 @@ struct StartupData{
     // Phase 2: Open-loop ramp
     struct {
         uint32_t start_time_uS = 0;
-        uint32_t elecFrequency_Hz = 0;  
-        uint32_t start_ElecFrequency_mHz = RPM_TO_HZ(UNIT_TO_MILLI(MECHFREQ_TO_ELECFREQ(100.0, __motorParams.polePairs)));
-        uint32_t ramp_ElecFrequency_mHzpS = RPM_TO_HZ(UNIT_TO_MILLI(MECHFREQ_TO_ELECFREQ(1100.0, __motorParams.polePairs))) / 5.0; 
+        float elecFrequency_Hz = 0;  
+        float start_ElecFrequency_Hz = RPM_TO_HZ(MECHFREQ_TO_ELECFREQ(10.0, __motorParams.polePairs));
+        float ramp_ElecFrequency_HzpS = RPM_TO_HZ(MECHFREQ_TO_ELECFREQ(50.0, __motorParams.polePairs)) / 20.0; 
         
-        uint32_t voltage_mV = 0;       // Start voltage
-        uint32_t start_voltage_mV = UNIT_TO_MILLI(1); 
-        uint32_t ramp_Voltage_mVpS = UNIT_TO_MILLI(2.0/5);     // Max voltage during open-loop
+        float start_voltage_V = 1; 
+        float ramp_Voltage_VpS = 3.0/20;     // Max voltage during open-loop
 
-        uint32_t ramp_duration_uS = UNIT_TO_MICRO(5.0);
+        uint32_t ramp_duration_uS = UNIT_TO_MICRO(20.0);
  
         uint32_t lastStepTime_uS = 0;      // Last commutation time
 
@@ -151,18 +159,27 @@ struct StartupData{
         
         bool rampComplete = 0;
     } ramp;
-    
+        
     // Phase 3: Switchover detection
     struct {
         uint32_t stableCycles = 0;           // How many cycles stable
         uint32_t requiredStableCycles = 10;  // Need 10 stable cycles
         uint32_t maxTimeout_uS = UNIT_TO_MICRO(150);
         uint32_t lastZeroCrossTime_uS = 0;
-        int32_t zeroCrossAngleDetected_mDeg = 0;
+        int32_t zeroCrossAngleDetected_Deg = 0;
         bool positionLocked = false;
         bool switchover_status = false;
     } switchover;
     
+};
+
+enum class mc_status: uint8_t {
+    PMSM_OK = 0,
+    PMSM_ERROR_INVALID_STATE,
+    PMSM_ERROR_OVERCURRENT,
+    PMSM_ERROR_OVERVOLTAGE,
+    PMSM_ERROR_UNDERVOLTAGE,
+    PMSM_ERROR_OVERTEMPERATURE
 };
 
 
@@ -170,28 +187,19 @@ class PmsmControl{
     static inline MCADCPWM3P<1> adcpwmDriver;
     static inline pmsmParameter motorParams;
     // Position Sensors
-
     static inline BemfZc<1> bemfZcd;
-
     static inline controlLoopContext ctx;
     static inline ControlLoopState cts;
-    static inline StartupData st_data;
+    static inline SensorlessTrap_StartupData sensorlessTrap_startup;
     static void hardwareInit();
-    //Operation modes
-    static inline void starting();
-    static inline void running();
-    static inline void braking();
-    static inline void calibrating();
-    //starting modes
-    static inline void starting_align();
-    static inline void starting_bemfzc();
-    static inline void starting_hall();
-    static inline void starting_encoder();
- 
-
-  
     
+    //Operation modes
+    static inline mc_status starting();
+    static inline mc_status running();
+    static inline mc_status braking();
+    static inline mc_status calibrating();
 
+    static mc_status starting_bemfzc();
 public:
 
     static inline void init()
@@ -221,7 +229,8 @@ public:
 
     ~PmsmControl() = default;
       //Control Superloop
-    static inline void controlLoop();
+    static inline mc_status pwmControlLoop();
+    static inline mc_status motorControlLoop();
 
 };
 

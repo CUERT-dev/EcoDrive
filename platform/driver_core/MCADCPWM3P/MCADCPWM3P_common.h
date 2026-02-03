@@ -17,6 +17,28 @@ extern float adcVoltageRef_volt;
 extern float internalRefVoltage_volt;
 extern const float externalRefVoltage_volt;
 
+#define SATURATE(v , min , max)(( v > max)?max: ((v < min)?0:v))
+constexpr uint32_t CC1E_MASK = (TIM_CCER_CC1E);
+constexpr uint32_t CC2E_MASK = (TIM_CCER_CC2E);
+constexpr uint32_t CC3E_MASK = (TIM_CCER_CC3E);
+constexpr uint32_t CC1NE_MASK = (TIM_CCER_CC1NE);
+constexpr uint32_t CC2NE_MASK = (TIM_CCER_CC2NE);
+constexpr uint32_t CC3NE_MASK = (TIM_CCER_CC3NE);
+
+// Pre-calculate masks at compile time
+constexpr uint32_t OC1M_MASK     = (0b111 << TIM_CCMR1_OC1M_Pos);
+constexpr uint32_t OC1M_PWM      = (0b110 << TIM_CCMR1_OC1M_Pos);
+constexpr uint32_t OC1M_INACTIVE = (0b100 << TIM_CCMR1_OC1M_Pos);
+
+constexpr uint32_t OC2M_MASK     = (0b111 << TIM_CCMR1_OC2M_Pos);
+constexpr uint32_t OC2M_PWM      = (0b110 << TIM_CCMR1_OC2M_Pos);
+constexpr uint32_t OC2M_INACTIVE = (0b100 << TIM_CCMR1_OC2M_Pos);
+
+constexpr uint32_t OC3M_MASK     = (0b111 << TIM_CCMR2_OC3M_Pos);
+constexpr uint32_t OC3M_PWM      = (0b110 << TIM_CCMR2_OC3M_Pos);
+constexpr uint32_t OC3M_INACTIVE = (0b100 << TIM_CCMR2_OC3M_Pos);
+
+
 uint16_t Adc1_Sample_Single_Channel_Temporary(uint32_t channel);
 void MCADCPWM3P_adc_calibrate();
 //=======================================================================================================

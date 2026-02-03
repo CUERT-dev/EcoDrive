@@ -37,14 +37,17 @@
 #define MCADCPWM3P_VSU_ADC_CHANNEL      LL_ADC_CHANNEL_1
 #define MCADCPWM3P_VSV_ADC_CHANNEL      LL_ADC_CHANNEL_2
 #define MCADCPWM3P_VSW_ADC_CHANNEL      LL_ADC_CHANNEL_3
+#define MCADCPWM3P_CS                   CS_TRIPLE_SHUNT
+
+#define MCADCPWM3P_VSBUS_ADC_CHANNEL    LL_ADC_CHANNEL_9   // PB1 - ADC1_IN9
 
 //###############
 // CURRENT SENSING CHANNELS (Configurable by CS type)
 #if (MCADCPWM3P_CS == CS_TRIPLE_SHUNT)
     // Three shunt resistors - one per phase
-    #define ADC_CHANNEL_PHASE_A_CURRENT    LL_ADC_CHANNEL_4   // PA3 - ADC1_IN4
-    #define ADC_CHANNEL_PHASE_B_CURRENT    LL_ADC_CHANNEL_5   // PA4 - ADC1_IN5
-    #define ADC_CHANNEL_PHASE_C_CURRENT    LL_ADC_CHANNEL_6   // PA5 - ADC1_IN6
+    #define MCADCPWM3P_CSU_ADC_CHANNEL LL_ADC_CHANNEL_4   // PA3 - ADC1_IN4
+    #define MCADCPWM3P_CSV_ADC_CHANNEL LL_ADC_CHANNEL_5   // PA4 - ADC1_IN5
+    #define MCADCPWM3P_CSW_ADC_CHANNEL LL_ADC_CHANNEL_6   // PA5 - ADC1_IN6
 
 #elif (MCADCPWM3P_CS == CS_DOUBLE_SHUNT)
     // Two shunt resistors - phases A & B only
@@ -68,15 +71,15 @@
 
 
 // PWMSCAN conditioning macros  (Condition read voltage in mV to Physcial sensor values (current in mA and voltage in mV) )
-#define U_CS_uV_TO_mA(v)()
-#define V_CS_uV_TO_mA(v)()
-#define W_CS_uV_TO_mA(v)()
-#define U_VS_uV_TO_mV(v)(v * float((( 41500.0+2200.0)/2200.0) /1000.0) )
-#define V_VS_uV_TO_mV(v)(v * float((( 41200.0+2200.0)/2200.0) /1000.0) )
-#define W_VS_uV_TO_mV(v)(v * float((( 41500.0+2200.0)/2200.0) /1000.0) )
+#define U_CS_V_TO_A(c)(c*1)
+#define V_CS_V_TO_A(c)(c*1)
+#define W_CS_V_TO_A(c)(c*1)
+#define U_VS_V_TO_V(v)(v * float((( 41500.0+2200.0)/2200.0)) )
+#define V_VS_V_TO_V(v)(v * float((( 41200.0+2200.0)/2200.0)) )
+#define W_VS_V_TO_V(v)(v * float((( 41500.0+2200.0)/2200.0)) )
 
-#define BUS_CS_uV_TO_uA(v)()
-#define BUS_VS_uV_TO_uV(v)()
+#define BUS_CS_V_TO_A(v)()
+#define BUS_VS_V_TO_V(v)(v * float((( 41500.0+2200.0)/2200.0)) )
 
 //================================================
 // HALL1 CONFIGURATION
