@@ -46,7 +46,23 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/core
 )
 
+# Link with platform EARLY to get include paths
+add_subdirectory(platform)
+#add_library(tinycbor STATIC IMPORTED)
+#set_target_properties(tinycbor PROPERTIES
+#    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/middleware/tinycbor/build/libtinycbor.a
+#)
 
+message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
+
+# Add platform includes to global include path
+include_directories(${PLATFORM_INCLUDES})
+
+
+
+set(MIDDLEWARE_SOURCES
+    ${CMAKE_SOURCE_DIR}/middleware/aebfStream.c
+)
 
 # Source files
 file(GLOB_RECURSE SOURCES
@@ -54,27 +70,26 @@ file(GLOB_RECURSE SOURCES
     "application/*.c"
     "driver/*.cpp"
     "driver/*.c"
-    "middleware/*.c"
-    "middleware/*.cpp"
     "core/ringbuffer.c"
 )
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${MIDDLEWARE_SOURCES})
 
-# Link with platform
-add_subdirectory(platform)
-message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
-
-# Add driver_core sources directly to the executable to ensure strong IRQ handlers
+# Add eld sources directly to the executable to ensure strong IRQ handlers
 # override weak startup symbols (avoids linker archive symbol resolution issues)
 target_sources(${PROJECT_NAME} PRIVATE ${PLATFORM_SOURCE})
+#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/middleware/tinycbor/src)
+#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/middleware/tinycbor/build)
 
 target_link_libraries(EcoDrive PRIVATE
     ${PLATFORM_INTERFACE}
     ${PLATFORM_LIB}
     ${TOOLCHAIN_LINK_LIBRARIES}
+    #tinycbor
 )
+
+
 
 # ADD THIS: Show size automatically after every build
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

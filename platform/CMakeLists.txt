@@ -14,6 +14,7 @@ set(HAL_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(STM32F4xx_HAL_DRIVER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver)
 set(CMSIS_DEVICE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include)
 set(CMSIS_CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS/Include)
+set(CMSIS_DSP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS-DSP)
 set(USBD_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library)
 set(USB_CLASS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library)
 set(FREERTOS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source)
@@ -23,12 +24,13 @@ set(STM32_COMMON_INCLUDES
     ${STM32F4xx_HAL_DRIVER_DIR}/Inc
     ${STM32F4xx_HAL_DRIVER_DIR}/Inc/Legacy  # Important for HAL/LL compatibility
     ${CMSIS_DEVICE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMSIS_CORE_DIR}
     ${HAL_CONFIG_DIR}
     ${USBD_LIB_DIR}/Core/Inc
     ${USB_CLASS_DIR}/Class/CDC/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/App
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/Target
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/
     ${CMAKE_CURRENT_SOURCE_DIR}/driver_impl
     ${FREERTOS_DIR}/include
     ${FREERTOS_DIR}/portable/GCC/ARM_CM4F
@@ -78,16 +80,16 @@ set(FreeRTOS_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/tasks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/timers.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 )
 
 set(USB_Device_Library_Src
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/App/usb_device.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/App/usbd_desc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/App/usbd_cdc_if.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/Target/usbd_conf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/usb_device.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/usbd_desc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/usbd_cdc_if.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/USB_DEVICE/usbd_conf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
@@ -103,22 +105,26 @@ set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/syscalls.c
 )
 
+
+set(CMSISCORE ${CMAKE_CURRENT_SOURCE_DIR}/Drivers/CMSIS)
+add_subdirectory(${CMSIS_DSP_DIR}/Source)
+
 # Driver core sources are NOT added to the static library to avoid linker archive issues
 # where weak startup symbols prevent strong handler definitions from being linked.
 # Instead, they are linked directly from the parent scope (see PLATFORM_DRIVER_CORE_SOURCES).
 file(GLOB_RECURSE Driver_Core_Src
-    ${CMAKE_CURRENT_SOURCE_DIR}/driver_core/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/driver_core/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/eldriver/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/eldriver/*.c
 )
 
 add_library(stm32f4_platform STATIC)
 target_sources(stm32f4_platform PRIVATE
-    ${FreeRTos_Src}
+    ${FreeRTOS_Src}
     ${STM32_Drivers_Src}
     ${USB_Device_Library_Src}
 )
 
-target_include_directories(stm32f4_platform PUBLIC ${STM32_COMMON_INCLUDES})
+target_include_directories(stm32f4_platform PUBLIC ${STM32_COMMON_INCLUDES} ${CMSIS_DSP_DIR}/Include)
 target_compile_definitions(stm32f4_platform PUBLIC ${DEVICE_DEFINITIONS})
 
 # =============================================
@@ -126,9 +132,10 @@ target_compile_definitions(stm32f4_platform PUBLIC ${DEVICE_DEFINITIONS})
 # =============================================
 # Create interface library for easy linking
 add_library(stm32f4_platform_interface INTERFACE)
-target_link_libraries(stm32f4_platform_interface INTERFACE stm32f4_platform)
+target_link_libraries(stm32f4_platform_interface INTERFACE stm32f4_platform CMSISDSP)
 target_include_directories(stm32f4_platform_interface INTERFACE
     ${STM32_COMMON_INCLUDES}
+    ${CMSIS_DSP_DIR}/Include
 )
 target_compile_definitions(stm32f4_platform_interface INTERFACE
     ${DEVICE_DEFINITIONS}

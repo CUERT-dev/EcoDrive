@@ -1,0 +1,7 @@
+numpy
+PyQt6
+pyside6
+pycparser
+pyqtdarktheme==2.1.0 --ignore-requires-python
+pyqtgraph
+npy-append-array
