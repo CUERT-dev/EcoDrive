@@ -9,7 +9,7 @@ from npy_append_array import NpyAppendArray
 count = 0
 
 class EcoDrive(QWidget):
-    def __init__(self, aebfStream, elecTele_bufferSize=20000):
+    def __init__(self, aebfStream, elecTele_bufferSize=5000):
         super().__init__()
         self.setWindowTitle("EcoDrive V0")
         layout = QVBoxLayout()
@@ -28,7 +28,7 @@ class EcoDrive(QWidget):
         controls_layout = QVBoxLayout(controls_frame)
         controls_layout.addWidget(QLabel("Controls"))
         self.toggle_elecTele_button = QPushButton("Start elecTele Log")
-        self.toggle_elecTele_button.clicked.connect(self.toggle_elecTele)
+        self.toggle_elecTele_button.clicked.connect(self.toggle_elecTeleFileLog)
         controls_layout.addWidget(self.toggle_elecTele_button)
 
 
@@ -43,7 +43,7 @@ class EcoDrive(QWidget):
         self.setLayout(layout)
 
         self.ELECTELE_CHANNELS = 5
-        self.ELECTELE_SAMPLES_PER_FRAME = 12
+        self.ELECTELE_SAMPLES_PER_FRAME = 24
         
         self.elecTele_bufferHead = 0
         self.elecTele_fileLogNew = 0
@@ -52,12 +52,13 @@ class EcoDrive(QWidget):
         self.elecTele_samplenum = np.zeros((elecTele_bufferSize,), dtype=np.uint32)  # To store frame indices
         self.elecTele_data = np.zeros((elecTele_bufferSize, self.ELECTELE_CHANNELS), dtype=np.float32)  # 12 samples, 5 values each
         self.elecTele_plotChannels = []
+        colors = ['blue', 'red', 'green', 'yellow', 'white']
         for i in range(self.ELECTELE_CHANNELS):
-            self.elecTele_plotChannels.append(self.graph_elecTele.plot(self.elecTele_data[:, i], pen=pg.mkPen(color=(i*50, 100, 255-i*50), width=3)))
+            self.elecTele_plotChannels.append(self.graph_elecTele.plot(self.elecTele_data[:, i], pen=pg.mkPen(colors[i], width=3)))
         # Timer for graph updates
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
-        self.timer.start(1000)  # update every 50 ms
+        self.timer.start(100)  # update every 50 ms
 
         self.phase = 0
 
@@ -69,7 +70,7 @@ class EcoDrive(QWidget):
         elec_plot = np.roll(self.elecTele_data, -self.elecTele_bufferHead, axis=0)  # Roll to align head at index 0
         samplenum = np.roll(self.elecTele_samplenum, -self.elecTele_bufferHead)  # Align sample numbers as well
         for i in range(elec_plot.shape[1]):
-            self.elecTele_plotChannels[i].setData(elec_plot[:, i])
+            self.elecTele_plotChannels[i].setData(elec_plot[:400,  i])
         if(self.elecTele_fileLog):
             # Write new data to file
             if self.elecTele_fileLogNew:
@@ -77,7 +78,7 @@ class EcoDrive(QWidget):
                 self.elecTele_saveFile.append(combined)
                 self.elecTele_fileLogNew = 0
 
-    def toggle_elecTele(self):
+    def toggle_elecTeleFileLog(self):
         if self.elecTele_fileLog:
             self.elecTele_saveFile.close()
             self.elecTele_fileLog = False
@@ -91,7 +92,7 @@ class EcoDrive(QWidget):
         global count
         frame_index = int.from_bytes(payload[:4], 'little', signed=False)
 
-        data_array = np.frombuffer(payload[4:], dtype=np.float32)
+        data_array = np.frombuffer(payload[4:], dtype=np.int16)
         frame = data_array.reshape((self.ELECTELE_SAMPLES_PER_FRAME,
                                 self.ELECTELE_CHANNELS))
 

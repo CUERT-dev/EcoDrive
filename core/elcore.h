@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +13,7 @@ extern "C" {
 
 //============================================================================================
 
-#define ST_TASK(task_name, ticker, task, divisor)do{\
+#define pTASK(task_name, ticker, task, divisor)do{\
     static uint16_t counter_##task_name = 0;\
     if(++counter_##task_name >= divisor){\
         counter_##task_name = 0;\
@@ -135,6 +136,46 @@ static inline bool elcore_rstream_reserveWrite(elcore_rstream_t* cb,
     return true;
 }
 
+static inline void elcore_rstream_reserveWriteOverride(
+                                       elcore_rstream_t* cb,
+                                       uint16_t count,
+                                       void** writeptr1,
+                                       uint16_t* cont1,
+                                       void** writeptr2,
+                                       uint16_t* cont2)
+{
+    uint16_t free = elcore_rstream_freeSpace(cb);
+
+    if (count > free)
+    {
+        uint16_t drop = count - free;
+
+        cb->tail = (cb->tail + drop) % cb->capacity;
+    }
+
+    uint16_t cont_space;
+
+    if (cb->head >= cb->tail)
+        cont_space = cb->capacity - cb->head - (cb->tail == 0 ? 1 : 0);
+    else
+        cont_space = cb->tail - cb->head - 1;
+
+    *writeptr1 = cb->buffer + cb->head * cb->item_size;
+
+    if (cont_space >= count)
+    {
+        *writeptr2 = NULL;
+        *cont1 = count;
+        *cont2 = 0;
+    }
+    else
+    {
+        *writeptr2 = cb->buffer;
+        *cont1 = cont_space;
+        *cont2 = count - cont_space;
+    }
+}
+
 static inline bool elcore_rstream_peekRead(elcore_rstream_t* cb,
                                       void** readptr1,
                                       uint16_t* cont1,
@@ -174,7 +215,9 @@ static inline bool elcore_rstream_peekRead(elcore_rstream_t* cb,
 }
 
 
-
+//===========================================================================
+// elcore_smem
+//===========================================================================
 typedef struct{
     uint8_t *mem;
     uint32_t memsize;
@@ -211,8 +254,6 @@ static inline void* elcore_smem_alloc_aligned(elcore_smem_t *cp, uint32_t size)
     cp->offset = offset_aligned + size;
     return ptr;
 }
-
-
 
 //===========================================================================
 // Utils

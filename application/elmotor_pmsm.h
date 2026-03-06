@@ -3,6 +3,7 @@
 #include "core/elcore.h"
 #include "eldriver/eldriver_mc3p.h"
 #include "eldriver/eldriver_conf.h"
+#include "eldriver/eldriver_hall.h"
 #include "sys.h"
 #include "arm_math.h"
 //===================================================
@@ -13,14 +14,20 @@
 extern "C" {
 #endif
 
-#define PWM_FREQ                   20000
-#define XMCPWM_TICKFREQ            PWM_FREQ
-#define XMCPWM_TICKPERIOD_US       (1000000.0/XMCPWM_TICKFREQ)
-#define XMCPWM_TICKPERIOD_MS       (XMCPWM_TICKPERIOD_US/1000.0)
-#define XMCPWM_US_TO_TICKS(us)     (us/XMCPWM_TICKPERIOD_US)
-#define XMCPWM_MS_TO_TICKS(ms)     (XMCPWM_US_TO_TICKS(ms*1000))
-#define XMCPWM_TICKS_TO_US(ticks)  (ticks * XMCPWM_TICKPERIOD_US)
-#define XMCPWM_TICKS_TO_MS(ticks)  (ticks * XMCPWM_TICKPERIOD_MS)
+#define PWM_FREQ                   40000
+#define BEMF_THRESHOLD_LOW         0.1
+#define BEMF_THRESHOLD_HIGH        0.3
+#define COMMUTATION_PHASE_DELAY    0
+#define STUP_BEMFZC_ERROR_MARGIN    0.05 
+#define STUP_BEMFZC_GOOD_EST_COUNT        10
+
+#define XCPWM_TICKFREQ            PWM_FREQ
+#define XCPWM_TICKPERIOD_US       (1000000.0/XCPWM_TICKFREQ)
+#define XCPWM_TICKPERIOD_MS       (XCPWM_TICKPERIOD_US/1000.0)
+#define XCPWM_US_TO_TICKS(us)     (us/XCPWM_TICKPERIOD_US)
+#define XCPWM_MS_TO_TICKS(ms)     (XCPWM_US_TO_TICKS(ms*1000))
+#define XCPWM_TICKS_TO_US(ticks)  (ticks * XCPWM_TICKPERIOD_US)
+#define XCPWM_TICKS_TO_MS(ticks)  (ticks * XCPWM_TICKPERIOD_MS)
 
 #define STUP_TABLE_SIZE 4
 
@@ -57,9 +64,30 @@ typedef enum{
 }elmotor_pmsm_state;
 
 
+typedef struct{
+    int32_t threshold_low;
+    int32_t threshold_high;
+    int32_t elec_angle_q31;
+    uint32_t last_zc_tick;
+    uint16_t tick_freq;
+    float elec_speed;
+    float phase_delay;
+    uint8_t state;
+} bemfzc_t;
+
+void bemfzf_init(bemfzc_t *h,float threshold_low_V, float threshold_high_V, float phase_delay, uint16_t tick_freq);
+void bemfzc_update(bemfzc_t *h, int32_t bemf, uint32_t ticks, uint8_t dir);
+void bemfzc_takeover(bemfzc_t *h, void(*cb)(void));
+int32_t bemfzc_elec_angle_q31(bemfzc_t *h);
+float bemfzc_elec_speed(bemfzc_t *h);
+void bemfzc_reset(bemfzc_t *h);
+
+
 
 typedef struct{
-    eldriver_mc3p_handle_t mc3p;
+    eldriver_mc3p_t mc3p;
+
+    bool initialized;
     union{
         eldriver_mc3p_svm_data_t svm;
         eldriver_mc3p_trap_data_t trap;
@@ -74,17 +102,30 @@ typedef struct{
     pmsm_stup_stage_t stup_stage_last;
     pmsm_stup_stage_t stup_stage_current;
     uint8_t           stup_ramp_idx;
+    float             stup_est_elec_speed;
+    uint8_t           stup_good_est_count;
 
-    float bus_voltage_q31;
+    // q31_t vbus_q31;
+    // q31_t vbemf_q31;
+    // q31_t iu_q31;
+    // q31_t iv_q31;
+    // q31_t iw_q31;
+    
+    float elec_speed;
+    q15_t mc3p_alpha_q15;
+    q15_t mc3p_beta_q15;
     q15_t mc3p_trap_duty_q15;
     eldriver_mc3p_sector_t mc3p_sector;
+
     elmotor_dir_t dir;
     elmotor_pmsm_state state;
-} elmotor_pmsm_handle_t;
+
+    bemfzc_t bemfzc;
+} elmotor_pmsm_t;
 
 
-extern elmotor_pmsm_handle_t motor_c;
-void elmotor_pmsm_init(elmotor_pmsm_handle_t *cp, elmotor_pmsm_stup_config_t stup_cfg);
+extern elmotor_pmsm_t motor_c;
+void elmotor_pmsm_init(elmotor_pmsm_t *cp, elmotor_pmsm_stup_config_t stup_cfg);
 
 
 
@@ -92,11 +133,11 @@ void elmotor_pmsm_init(elmotor_pmsm_handle_t *cp, elmotor_pmsm_stup_config_t stu
 #include "core/elcore.h"
 
 #define SAMPLE_LEN 5
-#define SAMPLES_PER_FRAME 12
+#define SAMPLES_PER_FRAME 24
 #define FRAME_BUFFER_COUNT 8 
 #define FRAME_BUFFER_NOTIFY_THRESHOLD 6
 
-typedef float pwmSample_t[SAMPLE_LEN];
+typedef int16_t pwmSample_t[SAMPLE_LEN];
 typedef struct
 {
     uint32_t sample_counter;

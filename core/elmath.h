@@ -27,6 +27,9 @@
 #define NANOS_TO_TICKS(ns, freq_Hz) (((ns) * (freq_Hz)) / 1000000000)
 #define MICROS_TO_TICKS(us, freq_Hz) (((us) * (freq_Hz)) / 1000000)
 
+#define IN_RANGE(c, min, max)((c<=max)&&(c>=min))
+#define NEARLY_EQUAL(a, b, diff) (((a-b) <= diff) && ((a-b) >= -diff))
+
 // Generic versions with configurable min/max
 inline int elmath_increment_roll(int x, int min, int max)
 {

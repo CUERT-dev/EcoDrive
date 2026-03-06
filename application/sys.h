@@ -1,7 +1,7 @@
 #pragma once
 
 #include "elmotor_pmsm.h"
-#include "platform/platform.h"
+#include "platform.h"
 #include "middleware/aebfStream.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -42,4 +42,5 @@
 
 void sys_init();
 
-
+#include "eldriver/eldriver_core.h"
+extern eldriver_core_t core;

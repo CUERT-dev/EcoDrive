@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
 
-
+set(PLATFORM_NAME stm32f4)
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platform/cmake/gcc-arm-none-eabi.cmake)
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platform/${PLATFORM_NAME}/cmake/gcc-arm-none-eabi.cmake)
 
 project(EcoDrive LANGUAGES C CXX ASM)
 
@@ -46,8 +46,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/core
 )
 
+
 # Link with platform EARLY to get include paths
-add_subdirectory(platform)
+add_subdirectory(platform/${PLATFORM_NAME})
 #add_library(tinycbor STATIC IMPORTED)
 #set_target_properties(tinycbor PROPERTIES
 #    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/middleware/tinycbor/build/libtinycbor.a

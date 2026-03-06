@@ -25,12 +25,14 @@ TaskHandle_t xAebf_handle;
 
 eldriver_uart_handle_t serial;
 
-
 #define serial_init() eldriver_usbcdc_init(&serial)
 #define serial_write(data, len) eldriver_usbcdc_write(&serial, data, len)
 #define serial_read(data, len) eldriver_usbcdc_read(&serial, len)
 #define serial_rx_stats() eldriver_usbcdc_rx_stats(&serial)
 #define serial_tx_stats() eldriver_usbcdc_tx_stats(&serial)
+
+#include "eldriver/eldriver_core.h"
+eldriver_core_t core;
 
 
 QueueHandle_t aebf_queue_prio1;
@@ -189,6 +191,7 @@ void xAEBF(void* argument)
 void sys_init()
 {
     platform_init();
+    eldriver_core_init(&core);
     pwmDataBuffer_init(&pwmDataBuffer);
     serial.config.baudrate = 912600;
     serial_init();
@@ -231,8 +234,8 @@ void sys_init()
         .bus_V              = 12,
         .align_V            = 1,
         .time_mS             = {0 , 1000 , 1500 , 2000},
-        .volt_V             = {1 , 1.25, 1.5, 2},
-        .freq_Hz            = {100, 125, 150, 200}
+        .volt_V             = {2 , 2.25, 2.5, 2.75},
+        .freq_Hz            = {100, 125, 200, 250}
     };
     elmotor_pmsm_init(&motor_c, stup_cfg);
     vTaskStartScheduler();
