@@ -98,7 +98,12 @@ void dummyTask_log(void* argument){
     }
 }
 
+
+#define HOST
+
+#ifndef HOST
 extern elcore_rstream_t cdc_tx_buffer; // Assume this is defined and initialized elsewhere
+#endif 
 
 void dummyTask_debug(void* argument){
     // Previous counters for throughput calculation
@@ -107,6 +112,7 @@ void dummyTask_debug(void* argument){
     static TickType_t last_tick        = 0;
     static uint8_t tx_wm_counter       = 0;
     while (1) {
+        #ifndef HOST
         TickType_t now_tick = xTaskGetTickCount();
         float elapsed_s = (now_tick - last_tick) / (float)configTICK_RATE_HZ;
 
@@ -132,6 +138,7 @@ void dummyTask_debug(void* argument){
             tx_wm_counter = 0;
             elcore_rstream_resetStats(&cdc_tx_buffer); // Reset stats periodically to prevent overflow and get fresh rates
         }
+        #endif
         // --- Optional: additional metrics ---
         //print_debug("Task Stack HighWater: %u", uxTaskGetStackHighWaterMark(AEBF_Handle));
         //print_debug("Queue Lengths, Semaphore Counts, etc.");
@@ -187,7 +194,7 @@ void xAEBF(void* argument)
     }
 }
 
-#include <stm32f4xx_hal.h>
+
 void sys_init()
 {
     platform_init();

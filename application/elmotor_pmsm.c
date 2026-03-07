@@ -99,6 +99,11 @@ void elmotor_pmsm_init(elmotor_pmsm_t *cp, elmotor_pmsm_stup_config_t stup_cfg)
     started = 1;
 }
 
+void elmotor_pmsm_setSpeed(elmotor_pmsm_t *cp, uint16_t speed_rpm)
+{
+}
+
+
 void pmsm_idle(elmotor_pmsm_t *cp)
 {
     

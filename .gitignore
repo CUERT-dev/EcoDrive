@@ -37,6 +37,7 @@
 
 #Build Directory 
 /build
+/host_build
 cmake_install.cmake
 CMakeCache.txt
 Makefile

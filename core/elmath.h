@@ -31,22 +31,21 @@
 #define NEARLY_EQUAL(a, b, diff) (((a-b) <= diff) && ((a-b) >= -diff))
 
 // Generic versions with configurable min/max
-inline int elmath_increment_roll(int x, int min, int max)
+static inline int elmath_increment_roll(int x, int min, int max)
 {
     return ((x) >= (max)) ? (min) : ((x) + 1);
 }
 
-inline int elmath_decrement_roll(int x, int min, int max)
+static inline int elmath_decrement_roll(int x, int min, int max)
 {   
     return ((x) <= (min)) ? (max) : ((x) - 1);
 }
 
 
 
-inline float elmath_linearInterp(float *y_arr, float *x_arr, float x)
+static inline float elmath_linearInterp(float *y_arr, float *x_arr, float x)
 {
     return (y_arr[0] + ( (x - x_arr[0]) * ((y_arr[1] - y_arr[0])/(x_arr[1] - x_arr[0])) ) ); 
 }
-
 
 

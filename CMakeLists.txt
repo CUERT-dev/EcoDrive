@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
 
-set(PLATFORM_NAME stm32f4)
+# Select target platform
+set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/platform/${PLATFORM_NAME}/cmake/gcc-arm-none-eabi.cmake)
+if(NOT PLATFORM_NAME STREQUAL "host")
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/platform/${PLATFORM_NAME}/cmake/gcc-arm-none-eabi.cmake")
+endif()
 
 project(EcoDrive LANGUAGES C CXX ASM)
 
@@ -71,7 +74,7 @@ file(GLOB_RECURSE SOURCES
     "application/*.c"
     "driver/*.cpp"
     "driver/*.c"
-    "core/ringbuffer.c"
+    "core/elmath.h"
 )
 
 # Create executable
@@ -91,7 +94,7 @@ target_link_libraries(EcoDrive PRIVATE
 )
 
 
-
+if(NOT PLATFORM_NAME STREQUAL "host")
 # ADD THIS: Show size automatically after every build
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "=== Memory Usage ==="
@@ -113,3 +116,4 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.bin
 )
+endif()

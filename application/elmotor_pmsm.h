@@ -83,7 +83,6 @@ float bemfzc_elec_speed(bemfzc_t *h);
 void bemfzc_reset(bemfzc_t *h);
 
 
-
 typedef struct{
     eldriver_mc3p_t mc3p;
 
@@ -121,12 +120,16 @@ typedef struct{
     elmotor_pmsm_state state;
 
     bemfzc_t bemfzc;
-} elmotor_pmsm_t;
 
+    uint8_t pole_pairs;
+
+    float elec_spee_setpoint;
+} elmotor_pmsm_t;
 
 extern elmotor_pmsm_t motor_c;
 void elmotor_pmsm_init(elmotor_pmsm_t *cp, elmotor_pmsm_stup_config_t stup_cfg);
-
+void elmotor_pmsm_setSpeed(elmotor_pmsm_t *cp, uint16_t speed_rpm);
+void elmotor_pmsm_freewheel(elmotor_pmsm_t *cp);
 
 
 

@@ -9,17 +9,22 @@
         {
             "label": "Debug",
             "type": "shell",
-            "command": "cd build  && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4"
-        },
-        {   
-            "label": "CMake Only",
-            "type": "shell", 
-            "command": "cd build  && cmake .."
+            "command": "cd build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f4 && make -j4"
         },
         {   
             "label": "Clean",
             "type": "shell", 
             "command": "cd build  && rm -rf *"
+        },
+        {
+            "label": "Host Debug",
+            "type": "shell",
+            "command": "cd build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=host && make -j4"
+        },
+        {   
+            "label": "CMake Only",
+            "type": "shell", 
+            "command": "cd build  && cmake .."
         },
         {
             "label": "PyPortRelease",
