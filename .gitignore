@@ -43,4 +43,4 @@ CMakeCache.txt
 Makefile
 
 # Python venv
-tools/EcoDriveTool_venv
+tools/env
