@@ -23,6 +23,7 @@ typedef struct{
 typedef struct{
     eldriver_uart_config_t config;
     eldriver_uart_status_t status;
+    int fd;
 }eldriver_uart_handle_t;
 
 void eldriver_uart1_init(eldriver_uart_handle_t *handle);

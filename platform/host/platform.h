@@ -1,6 +1,35 @@
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
 
-inline void platform_init(void)
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+#define HOST_TIMERS 30
+
+
+typedef void (*timer_callback_t)(void);
+
+typedef struct {
+    uint64_t periodic_time_ns;      // how many virtual ticks between calls
+    uint64_t last_time_ns; // last tick we fired
+    timer_callback_t cb;
+} vtimer_t;
+
+
+typedef struct {
+    vtimer_t timers[HOST_TIMERS];
+    int      timer_index;
+    int64_t  min_timestep_ns;
+} vtimer_manager_t;
+
+extern vtimer_manager_t timer_manager;
+extern volatile uint64_t virtual_tick;
+bool register_timer(vtimer_manager_t* mgr, timer_callback_t cb, uint64_t timestep_ns);
+
+void platform_init();
+
+#ifdef __cplusplus
 }
+#endif

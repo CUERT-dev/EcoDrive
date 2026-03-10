@@ -650,9 +650,9 @@ void eldriver_mc3p_read_sync(eldriver_mc3p_t *h, void* data)
     if(is_svm)
     {
         ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
-        ((eldriver_mc3p_svm_data_t *)(data))->cu_q31     = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
-        ((eldriver_mc3p_svm_data_t *)(data))->cv_q31     = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);  
-        ((eldriver_mc3p_svm_data_t *)(data))->cw_q31     = (h->sync_scale_q31[h->sync_rank_scale[3]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);        
+        ((eldriver_mc3p_svm_data_t *)(data))->cu_q31     = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);
+        ((eldriver_mc3p_svm_data_t *)(data))->cv_q31     = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);  
+        ((eldriver_mc3p_svm_data_t *)(data))->cw_q31     = (h->sync_scale_q31[h->sync_rank_scale[3]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[3]][1]);        
     }
     else if (is_trap)
     {

@@ -31,5 +31,11 @@
             "type": "shell",
             "command": "cd tools/build  && rm -rf * && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4"
         },
+        {
+            "label": "Virtual PORTS",
+            "type": "shell",
+            "command": "sudo socat -d -d pty,link=/dev/ttyACM_CDC0,raw,echo=0,mode=666 pty,link=/dev/ttyACM_CDC1,raw,echo=0,mode=666",
+            "isBackground": true
+        }
     ]
 }

@@ -32,6 +32,7 @@ set(FreeRTOS_Src
 
 set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/platform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/virtual_pmsm.c
 )
 
 file(GLOB_RECURSE Driver_Core_Src

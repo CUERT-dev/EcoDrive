@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+
+
 void eldriver_usbcdc_init(eldriver_uart_handle_t *handle);
 uint8_t eldriver_usbcdc_write(eldriver_uart_handle_t *handle, uint8_t* data, uint8_t len);
 uint16_t eldriver_usbcdc_read(eldriver_uart_handle_t *handle, uint8_t* data, uint8_t len);

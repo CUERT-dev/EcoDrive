@@ -6,7 +6,6 @@
 // For trap sectors specifically (1-6)
 #define TRAP_INCREMENT(mc3p_sector, dir)((dir == ELMOTOR_DIR_FORWARD)?elmath_increment_roll(mc3p_sector, ELDRIVER_MC3P_SECTOR_TRAP1, ELDRIVER_MC3P_SECTOR_TRAP6):elmath_decrement_roll(mc3p_sector, ELDRIVER_MC3P_SECTOR_TRAP1, ELDRIVER_MC3P_SECTOR_TRAP6))
 
-uint8_t started = 0;
 
 static const float mc3p_sync_scales[][2] = 
 {
@@ -96,7 +95,7 @@ void elmotor_pmsm_init(elmotor_pmsm_t *cp, elmotor_pmsm_stup_config_t stup_cfg)
     cp->stup_stage_current = STUP_STAGE_STBEMF_RESET;
     bemfzf_init(&cp->bemfzc, BEMF_THRESHOLD_LOW, BEMF_THRESHOLD_HIGH, COMMUTATION_PHASE_DELAY, XCPWM_TICKFREQ);
     eldriver_mc3p_init(&(cp->mc3p), mc3p_sync_scales);
-    started = 1;
+    cp->initialized = 1;
 }
 
 void elmotor_pmsm_setSpeed(elmotor_pmsm_t *cp, uint16_t speed_rpm)
@@ -199,6 +198,7 @@ void pmsm_cl_trap(elmotor_pmsm_t *cp)
 
 static inline void pmsm_pwm_loop(elmotor_pmsm_t *cp)
 {
+    if(!cp->initialized)return;
     uint32_t start = eldriver_core_prof_tick();
     eldriver_mc3p_read_sync(&cp->mc3p, &cp->mc3p_sync_data);
     
@@ -221,10 +221,10 @@ static inline void pmsm_pwm_loop(elmotor_pmsm_t *cp)
     uint8_t len;
     
     pwmSample_t *sample_ptr = pwmDataBuffer_sample(&pwmDataBuffer, &len);
-    if(cp->mc3p.mode == ELDRIVER_MC3P_MODE_TRAP){
+    if(cp->mc3p.mode == ELDRIVER_MC3P_MODE_TRAP && sample_ptr){
         (*sample_ptr)[0] = (int16_t)(((int64_t)(cp->mc3p_sync_data.trap.vbus_q31 )* ELDRIVER_MC3P_VS_SCALE * 1000) >> 31);
         (*sample_ptr)[1] = (int16_t)(((int64_t)(cp->mc3p_sync_data.trap.vbemf_q31) * ELDRIVER_MC3P_VS_SCALE * 1000) >> 31);
-        //(*sample_ptr)[2] = (int16_t)(((int64_t)(cp->mc3p_sync_data.trap.cbus_q31) * ELDRIVER_MC3P_CS_SCALE * 1000) >> 31);
+        (*sample_ptr)[2] = (int16_t)(((int64_t)(cp->mc3p_sync_data.trap.cbus_q31) * ELDRIVER_MC3P_CS_SCALE * 1000) >> 31);
         (*sample_ptr)[4] = (int16_t)cp->elec_speed;
     }
     pwmDataBuffer_pushSample(&pwmDataBuffer);

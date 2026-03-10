@@ -64,4 +64,86 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
     *ppxTimerTaskStackBuffer = uxTimerTaskStack;
     *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }
+
 #endif
+
+
+#include <stdint.h>
+#include <pthread.h>
+#include <time.h>
+#include <unistd.h>
+#define VTIM_TICK_HZ 1000000  // 100 kHz virtual tick resolution
+volatile uint64_t virtual_tick = 0;
+vtimer_manager_t timer_manager;
+
+// get monotonic time in ns
+static inline uint64_t now_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+}
+
+// register a timer (frequency in Hz)
+bool register_timer(vtimer_manager_t* mgr, timer_callback_t cb, uint64_t timestep_ns) {
+    if (mgr->timer_index >= HOST_TIMERS) return false;
+
+    vtimer_t* t = &mgr->timers[mgr->timer_index++];
+    t->periodic_time_ns = (timestep_ns);
+    t->last_time_ns = now_ns();
+    t->cb = cb;
+
+    if(timestep_ns < mgr->min_timestep_ns)
+    {
+        mgr->min_timestep_ns = timestep_ns;
+    }
+
+    return true;
+}
+
+void* tick_thread(void* arg)
+{
+    const uint64_t sleep_ns = 1000000ULL;   // 1 ms coarse sleep
+    uint64_t sim_time_ns = now_ns();        // simulation time anchored to wall clock
+    uint64_t last_wall_ns = sim_time_ns;
+
+    // determine smallest timestep needed by any timer
+    uint64_t dt_ns = timer_manager.min_timestep_ns; // example 10 us, can be min of all timers
+
+    while (1)
+    {
+        dt_ns = timer_manager.min_timestep_ns;
+        uint64_t current_wall_ns = now_ns();
+        uint64_t elapsed_ns = current_wall_ns - last_wall_ns;
+        last_wall_ns = current_wall_ns;
+
+        uint64_t steps = elapsed_ns / dt_ns;
+        for (uint64_t i = 0; i < steps; i++)
+        {
+            sim_time_ns += dt_ns;
+
+            // unified check of all timers
+            for (int t_idx = 0; t_idx < timer_manager.timer_index; t_idx++)
+            {
+                vtimer_t* t = &timer_manager.timers[t_idx];
+                if (!t->cb) continue;
+
+                if (sim_time_ns - t->last_time_ns >= t->periodic_time_ns)
+                {
+                    t->last_time_ns += t->periodic_time_ns; // advance by one period
+                    t->cb();
+                }
+            }
+        }
+
+        // coarse sleep to avoid spinning CPU
+        struct timespec req = {0, sleep_ns};
+        nanosleep(&req, NULL);
+    }
+}
+
+void platform_init()
+{
+    timer_manager.min_timestep_ns = 1000000;
+    pthread_t t;
+    pthread_create(&t, NULL, tick_thread, NULL);
+}
