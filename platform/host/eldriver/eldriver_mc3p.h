@@ -76,6 +76,9 @@ typedef struct{
     uint16_t dutyw_q15;
     int32_t sync_scale_q31[MC3P_SYNC_CHANNELS][2];
     uint8_t sync_rank_scale[4];
+
+    int switch_state[3];
+    int phase_state[3];
 }eldriver_mc3p_t;
 
 typedef struct

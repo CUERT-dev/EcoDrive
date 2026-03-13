@@ -74,6 +74,7 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
 #include <unistd.h>
 #define VTIM_TICK_HZ 1000000  // 100 kHz virtual tick resolution
 volatile uint64_t virtual_tick = 0;
+float vtime = 0;
 vtimer_manager_t timer_manager;
 
 // get monotonic time in ns

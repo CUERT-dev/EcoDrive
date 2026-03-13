@@ -6,18 +6,33 @@
 #define SATURATE(v , min , max)(( v > max)?max: ((v < min)?0:v))
 #define Q15_HALF        16384   // 0.5 × 32768
 #define Q15_SQRT3_BY_2  28378   // 0.8660254 × 32768
-float time = 0;
+
+extern float vtime;
+pmsm_model pmsm;
+elec_bus pmsm_ebus_inverter;
+inverter_model inverter;
 
 void eldriver_mc3p_init(eldriver_mc3p_t *h,const float scales[MC3P_SYNC_CHANNELS][2])
 {
-    virtual_pmsm.Ra = 0.05;
-    virtual_pmsm.elec.L[0] = 0.000001;
-    virtual_pmsm.elec.L[1] = 0.000001;
-    virtual_pmsm.elec.L[2] = 0.000001;
-    virtual_pmsm.Ke = 0.1;
-    virtual_pmsm.elec.omega_e = 1;
+    pmsm.Ra = 0.05;
+    pmsm.Ld = 0.001;
+    pmsm.Lq = 0.001;
+    pmsm.Ke = 0.1;
+    pmsm.Kt = 0.1;
+    pmsm.J = 1;
+    pmsm.B = 1;
+    pmsm.mech.omega = 1;
+    pmsm.pole_pairs = 7;
+
+    inverter.vbus = 16;
+    inverter.min_fw_current = 0.05;
+    inverter.e_bus = &pmsm_ebus_inverter;
+
+    pmsm_init(&pmsm, &pmsm_ebus_inverter);
     register_timer(&timer_manager, eldriver_mc3p_sync_postScanCallback, (uint64_t)(1e9/h->config.pwm_Hz));
 }
+
+
 void eldriver_mc3p_setScales(eldriver_mc3p_t *h,const float scales[MC3P_SYNC_CHANNELS][2]){}
 void eldriver_mc3p_bg_startConv(eldriver_mc3p_t *h){}
 uint8_t eldriver_mc3p_bg_channels(eldriver_mc3p_t *h){}
@@ -30,35 +45,38 @@ void eldriver_mc3p_read_sync(eldriver_mc3p_t *h, void* data)
     uint8_t is_trap = IS_TRAP_SECTOR(h->sector_last);
     if(is_svm)
     {
-        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
-        ((eldriver_mc3p_svm_data_t *)(data))->cu_q31     = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
-        ((eldriver_mc3p_svm_data_t *)(data))->cv_q31     = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;  
-        ((eldriver_mc3p_svm_data_t *)(data))->cw_q31     = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;        
+        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(inverter.vbus)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
+        ((eldriver_mc3p_svm_data_t *)(data))->cu_q31     = 0;
+        ((eldriver_mc3p_svm_data_t *)(data))->cv_q31     = 0;  
+        ((eldriver_mc3p_svm_data_t *)(data))->cw_q31     = 0;        
     }
     else if (is_trap)
     {
-        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
-        ((eldriver_mc3p_trap_data_t *)(data))->vbemf_q31 = ((float)(virtual_pmsm.elec.i[0])/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
-        ((eldriver_mc3p_trap_data_t *)(data))->cbus_q31  = ((float)(virtual_pmsm.elec.i[1])/ELDRIVER_MC3P_CS_SCALE) * INT32_MAX;
+        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(inverter.vbus)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
+        ((eldriver_mc3p_trap_data_t *)(data))->vbemf_q31 = 0;
+        ((eldriver_mc3p_trap_data_t *)(data))->cbus_q31  = 0;
     }
     else{
-        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(BUS_VOLTAGE)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
+        ((eldriver_mc3p_trap_data_t *)(data))->vbus_q31  = ((float)(inverter.vbus)/ELDRIVER_MC3P_VS_SCALE) * INT32_MAX;
     }
 }
 
 void eldriver_mc3p_write_phase_state(eldriver_mc3p_t *h, eldriver_mc3p_phase_state_t state_u, eldriver_mc3p_phase_state_t state_v, eldriver_mc3p_phase_state_t state_w)
 {
-    virtual_pmsm.elec.switch_state[0] = state_u;
-    virtual_pmsm.elec.switch_state[1] = state_v;
-    virtual_pmsm.elec.switch_state[2] = state_w;
+    h->switch_state[0] = (state_u != ELDRIVER_MC3P_PHASE_FLOAT)? 1 : 0;
+    h->switch_state[1] = (state_v != ELDRIVER_MC3P_PHASE_FLOAT)? 1 : 0;
+    h->switch_state[2] = (state_w != ELDRIVER_MC3P_PHASE_FLOAT)? 1 : 0;
+    h->phase_state[0] = state_u;
+    h->phase_state[1] = state_v;
+    h->phase_state[2] = state_w;
 }
 void eldriver_mc3p_write_phase_duty(eldriver_mc3p_t *h, uint16_t duty_u_q15, uint16_t duty_v_q15, uint16_t duty_w_q15)
 {
-    virtual_pmsm.elec.v[0] = ((float)duty_u_q15/INT16_MAX) * BUS_VOLTAGE;
-    virtual_pmsm.elec.v[1] = ((float)duty_v_q15/INT16_MAX) * BUS_VOLTAGE;
-    virtual_pmsm.elec.v[2] = ((float)duty_w_q15/INT16_MAX) * BUS_VOLTAGE;
-    pmsm_step(&virtual_pmsm, 1.0/h->config.pwm_Hz, time);
-    time += 1.0/h->config.pwm_Hz;
+    float duty[3] = {((float)duty_u_q15/INT16_MAX), ((float)duty_v_q15/INT16_MAX), ((float)duty_w_q15/INT16_MAX)};
+    float dt = 1.0/h->config.pwm_Hz;
+    inverter_step(&inverter, duty, h->switch_state, dt, vtime);
+    pmsm_step(&pmsm, dt, vtime);
+    vtime += dt;
 }
 
 void eldriver_mc3p_write_float(eldriver_mc3p_t *h)

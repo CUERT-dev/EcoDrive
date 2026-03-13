@@ -13,21 +13,33 @@
 #define US_TO_CLK(us)(us * (CLK_FREQ / 1000000))
 
 void(*commutation_callback)();
-volatile static uint8_t hall1_value = 000;
+volatile static uint8_t hall1_value = 0b000;
 volatile static uint32_t hall1_period_uS = 0;
 
-#define HALL_GPIOInit(port, pin)do{\
-    LL_GPIO_SetPinMode(port, pin, LL_GPIO_MODE_INPUT);\
-    LL_GPIO_SetPinPull(port, pin, LL_GPIO_PULL_NO);\
-    LL_GPIO_SetPinSpeed(port, pin, LL_GPIO_SPEED_FREQ_LOW);\
-}while(0)
+
+#ifdef ELDRIVER_HALL1_ENABLED
 
 
 uint8_t hall1_gpioRead()
 {
-    return 0;
+    uint8_t state = 0;
+    // Read each pin and shift into the correct bit position
+    if (LL_GPIO_IsInputPinSet(ELDRIVER_HALL1_A_PORT, ELDRIVER_HALL1_A_PIN)) state |= (1 << 2); // MSB
+    if (LL_GPIO_IsInputPinSet(ELDRIVER_HALL1_B_PORT, ELDRIVER_HALL1_B_PIN)) state |= (1 << 1);
+    if (LL_GPIO_IsInputPinSet(ELDRIVER_HALL1_C_PORT, ELDRIVER_HALL1_C_PIN)) state |= (1 << 0); // LSB
+    
+    return state;
 }
 
+#define HALL1_GPIO_INIT(pin , port)do{\
+    LL_GPIO_InitTypeDef GPIO_InitStruct = {0};\
+    GPIO_InitStruct.Pin = pin;\
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;\
+    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_MEDIUM;\
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;\
+    GPIO_InitStruct.Alternate = LL_GPIO_AF_1;\
+    LL_GPIO_Init(port, &GPIO_InitStruct);\
+}while(0)
 
 void eldriver_hall1_init()
 {   
@@ -64,15 +76,13 @@ void eldriver_hall1_init()
     NVIC_SetPriority(TIM2_IRQn, 2); // Lower priority than PWM timer
     NVIC_EnableIRQ(TIM2_IRQn);
 
-    #ifdef ELDRIVER_HALL1_HARDWARE
-    hall1_gpioInit();
-    #endif
+    HALL1_GPIO_INIT(ELDRIVER_HALL1_A_PIN, ELDRIVER_HALL1_A_PORT);
+    HALL1_GPIO_INIT(ELDRIVER_HALL1_B_PIN, ELDRIVER_HALL1_B_PORT);
+    HALL1_GPIO_INIT(ELDRIVER_HALL1_C_PIN, ELDRIVER_HALL1_C_PORT);
 
     //Arm Hall1 value
     hall1_value = hall1_gpioRead();
 }
-
-
 
 uint32_t last_t = 0;
 void eldriver_hall1_setComDelay_uS(uint32_t COM_delay_uS)
@@ -92,19 +102,13 @@ float eldriver_hall1_elec_speed(){
     return (((M_PI/6)*1000000)/hall1_period_uS);
 }
 
-int32_t eldriver_hall1_elec_angle_q31(){
-    switch(eldriver_hall1_read()){
-        case 0b100:return 0;
-        case 0b110:return INT32_MAX/6;  //(2PI / 6)
-        case 0b010:return INT32_MAX/3;
-        case 0b011:return INT32_MAX/2;
-        case 0b001:return INT32_MAX*(4.0/6);
-        case 0b101:return INT32_MAX*(5.0/6);
-        default:
-            break;
-    }
-    return INT32_MIN;
+uint8_t eldriver_hall1_read(){
+    return hall1_value;
 }
+
+
+
+#else
 
 void eldriver_comDelay_init()
 {
@@ -113,7 +117,7 @@ void eldriver_comDelay_init()
     
     // ===== TIME BASE CONFIGURATION =====
     LL_TIM_InitTypeDef TIM_InitStruct = {0};
-    TIM_InitStruct.Prescaler =  __LL_TIM_CALC_PSC(HAL_RCC_GetPCLK1Freq(), CLK_FREQ); // 84MHz/84 = 1MHz (1us resolution)
+    TIM_InitStruct.Prescaler =  __LL_TIM_CALC_PSC(HAL_RCC_GetPCLK1Freq()*2, CLK_FREQ); // 84MHz/84 = 1MHz (1us resolution)
     TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
     TIM_InitStruct.Autoreload = 0xFFFF; // Max 16-bit value (65.535ms)
     TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -160,6 +164,10 @@ void eldriver_comDelay_setComCallback(void (*callback)(void))
     commutation_callback = callback;
 }
 
+
+
+#endif
+
 // Timer 2 Interrupt Handler - THIS IS YOUR COMMUTATION EVENT!
 void TIM2_IRQHandler(void)
 {
@@ -168,7 +176,7 @@ void TIM2_IRQHandler(void)
         // HALL change happened , capture the period and update the hall_value using hall1_gpioRead();
         hall1_period_uS = CLK_TO_US(LL_TIM_IC_GetCaptureCH1(TIM2));
         
-        #ifdef HALL1_HARDWARE
+        #ifdef ELDRIVER_HALL1_ENABLED
         hall1_value = hall1_gpioRead();
         #endif
     }

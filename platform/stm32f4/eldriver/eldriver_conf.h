@@ -165,6 +165,18 @@
 #endif
 
 
+//================================================
+// HALL SENSOR CONFIGURATION    
+//================================================
+#define ELDRIVER_HALL1_ENABLED            
+#define ELDRIVER_HALL1_A_PIN              LL_GPIO_PIN_15
+#define ELDRIVER_HALL1_A_PORT             GPIOA
+#define ELDRIVER_HALL1_B_PIN              LL_GPIO_PIN_3
+#define ELDRIVER_HALL1_B_PORT             GPIOB
+#define ELDRIVER_HALL1_C_PIN              LL_GPIO_PIN_10
+#define ELDRIVER_HALL1_C_PORT             GPIOB
+
+
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

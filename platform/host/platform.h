@@ -26,9 +26,12 @@ typedef struct {
 
 extern vtimer_manager_t timer_manager;
 extern volatile uint64_t virtual_tick;
+extern float vtime;
+
 bool register_timer(vtimer_manager_t* mgr, timer_callback_t cb, uint64_t timestep_ns);
 
 void platform_init();
+
 
 #ifdef __cplusplus
 }
